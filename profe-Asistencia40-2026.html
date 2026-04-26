@@ -203,6 +203,8 @@ input:checked+.toggle-track:before{transform:translateX(18px)}
 /* ── MISC ── */
 .del-btn{background:none;border:none;color:var(--gray-300);font-size:20px;padding:4px 8px;flex-shrink:0;line-height:1}
 .del-btn:hover{color:#f87171}
+.edit-btn{background:none;border:none;color:var(--gray-300);font-size:16px;padding:4px 8px;flex-shrink:0;line-height:1;cursor:pointer}
+.edit-btn:hover{color:var(--brand)}
 .empty-state{text-align:center;padding:56px 24px}
 .empty-state .ei{font-size:52px;margin-bottom:12px;opacity:.35}
 .empty-state .et{font-size:17.5px;font-weight:700;color:var(--gray-500);margin-bottom:6px}
@@ -463,13 +465,16 @@ function renderHome(){
   $("btn-nc").onclick=function(){ var n=prompt("Nombre del curso (ej: Química Orgánica 3°A):"); if(n&&n.trim()) addCurso(n.trim()); };
 
   $$(".list-item").forEach(function(r){
-    r.addEventListener("click",function(e){ if(e.target.closest(".del-btn")||e.target.closest(".fav-btn")) return; navCurso(r.dataset.id); });
+    r.addEventListener("click",function(e){ if(e.target.closest(".del-btn")||e.target.closest(".fav-btn")||e.target.closest(".edit-btn")) return; navCurso(r.dataset.id); });
   });
   $$(".fav-btn").forEach(function(b){
     b.addEventListener("click",function(e){ e.stopPropagation(); toggleFav(b.dataset.id); drawSidebar(); renderHome(); });
   });
   $$(".del-btn.del-cur").forEach(function(b){
     b.addEventListener("click",function(e){ e.stopPropagation(); delCurso(b.dataset.id,b.dataset.name); });
+  });
+  $$(".edit-btn.edit-cur").forEach(function(b){
+    b.addEventListener("click",function(e){ e.stopPropagation(); editCurso(b.dataset.id); });
   });
 }
 
@@ -485,6 +490,8 @@ function courseRow(c, faved){
   h+='<div class="li-right">';
   if(live) h+='<span class="badge badge-green">EN CURSO</span>';
   h+='<button class="fav-btn'+(faved?" on":"")+'" data-id="'+esc(c.id)+'" title="'+(faved?"Quitar de favoritos":"Agregar a favoritos")+'">'+(faved?"⭐":"☆")+'</button>';
+  var lockedC=na>0;
+  h+='<button class="btn-icon edit-btn edit-cur" data-id="'+esc(c.id)+'" title="'+(lockedC?"Nombre bloqueado (ya hay asistencias) — solo descripción":"Editar curso")+'">'+(lockedC?'🔒':'✏️')+'</button>';
   h+='<button class="btn-icon del-btn del-cur" data-id="'+esc(c.id)+'" data-name="'+esc(c.name)+'">🗑</button>';
   h+='</div></div>';
   return h;
@@ -501,6 +508,50 @@ async function delCurso(id,name){
   var f=getFavs(); setFavs(f.filter(function(x){ return x!==id; }));
   try{ await post({action:"set",cursos:S.cursos,clases:S.clases,sessions:S.sessions,attendees:S.attendees,roster:S.roster}); }catch(e){}
   drawSidebar(); renderHome();
+}
+
+async function editCurso(id){
+  var curso=S.cursos.find(function(c){ return c.id===id; });
+  if(!curso) return;
+  var hasAtt=S.attendees.some(function(a){ return a.cursoId===id; });
+  if(hasAtt){
+    alert("⚠️ Este curso ya tiene asistencias registradas, por lo que su NOMBRE no puede modificarse para preservar la integridad de los reportes.\n\nSi necesitas un cambio de nombre, te recomiendo crear un curso nuevo.");
+    return;
+  }
+  var nuevo=prompt("Editar nombre del curso:", curso.name);
+  if(nuevo===null) return;
+  nuevo=nuevo.trim();
+  if(!nuevo){ alert("El nombre no puede estar vacío."); return; }
+  if(nuevo===curso.name) return;
+  S.cursos=S.cursos.map(function(c){ return c.id===id?Object.assign({},c,{name:nuevo}):c; });
+  if(S.cursoSel&&S.cursoSel.id===id) S.cursoSel.name=nuevo;
+  try{ await post({action:"set",cursos:S.cursos}); }catch(e){}
+  drawSidebar();
+  if(S.screen==="curso") renderCurso(); else renderHome();
+}
+
+async function editClase(id){
+  var clase=S.clases.find(function(c){ return c.id===id; });
+  if(!clase) return;
+  var hasAtt=S.attendees.some(function(a){ return a.claseId===id; });
+  var nuevoNombre=clase.name;
+  if(hasAtt){
+    alert("ℹ️ Esta clase ya tiene asistencias registradas. Solo podrás editar la descripción (el nombre queda bloqueado para preservar los reportes).");
+  } else {
+    var nn=prompt("Nombre de la clase:", clase.name);
+    if(nn===null) return;
+    nn=nn.trim();
+    if(!nn){ alert("El nombre no puede estar vacío."); return; }
+    nuevoNombre=nn;
+  }
+  var nuevaDesc=prompt("Reseña / descripción (opcional, deja vacío para borrarla):", clase.description||"");
+  if(nuevaDesc===null) return;
+  nuevaDesc=nuevaDesc.trim();
+  if(nuevoNombre===clase.name && nuevaDesc===(clase.description||"")) return;
+  S.clases=S.clases.map(function(c){ return c.id===id?Object.assign({},c,{name:nuevoNombre,description:nuevaDesc}):c; });
+  if(S.claseSel&&S.claseSel.id===id){ S.claseSel.name=nuevoNombre; S.claseSel.description=nuevaDesc; }
+  try{ await post({action:"set",clases:S.clases}); }catch(e){}
+  renderCurso();
 }
 
 /* ══════════ CURSO ══════════ */
@@ -558,7 +609,8 @@ function renderCurso(){
         h+='<div class="li-title" style="display:flex;align-items:center;gap:7px">'+esc(cl.name)+(live?'<span class="badge badge-green">EN CURSO</span>':'')+'</div>';
         if(cl.description) h+='<div style="font-size:12.5px;color:var(--gray-400);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">'+esc(cl.description)+'</div>';
         h+='<div class="li-sub">'+fmtD(cl.createdAt)+' · '+na+' asistencia'+(na!==1?'s':'')+'</div>';
-        h+='</div><div class="li-right"><button class="del-btn del-cl" data-id="'+esc(cl.id)+'" data-name="'+esc(cl.name)+'">🗑</button></div></div>';
+        var lockedCl=na>0;
+        h+='</div><div class="li-right"><button class="edit-btn edit-cl" data-id="'+esc(cl.id)+'" title="'+(lockedCl?"Nombre bloqueado — solo descripción":"Editar clase")+'">'+(lockedCl?'🔒':'✏️')+'</button><button class="del-btn del-cl" data-id="'+esc(cl.id)+'" data-name="'+esc(cl.name)+'">🗑</button></div></div>';
       });
       h+='</div>';
     }
@@ -600,10 +652,13 @@ function bindCurso(){
 
   // List items click
   $$(".list-item").forEach(function(r){
-    r.addEventListener("click",function(e){ if(e.target.closest(".del-btn")||e.target.closest(".drag-handle")) return; openClase(r.dataset.id); });
+    r.addEventListener("click",function(e){ if(e.target.closest(".del-btn")||e.target.closest(".edit-btn")||e.target.closest(".drag-handle")) return; openClase(r.dataset.id); });
   });
   $$(".del-cl").forEach(function(b){
     b.addEventListener("click",function(e){ e.stopPropagation(); delClase(b.dataset.id,b.dataset.name); });
+  });
+  $$(".edit-cl").forEach(function(b){
+    b.addEventListener("click",function(e){ e.stopPropagation(); editClase(b.dataset.id); });
   });
 
   // DRAG & DROP
