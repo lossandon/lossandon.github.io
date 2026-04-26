@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Registro de Asistencia — Dpto. Química UTA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root {
   --hdr-dark:   #0d1117;
@@ -63,15 +66,6 @@ body {
   background: radial-gradient(ellipse at 50% 0%, rgba(212,160,23,.12) 0%, transparent 70%);
   pointer-events: none;
 }
-.sys-title {
-  color: var(--gold-l);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-  opacity: .9;
-}
 .logo-wrap {
   margin: 0 auto 14px;
   width: 200px; height: 200px;
@@ -109,6 +103,27 @@ body {
   text-transform: uppercase;
   opacity: .85;
 }
+/* ── LOGO APP "ASISTENCIA40" (mismo estilo que panel del profesor) ── */
+.app-name-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 14px;
+}
+.app-name {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.03em;
+  color: #fff;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+.app-name .an-word { color: rgba(255,255,255,.92); }
+.app-name .an-num  { color: #f0b429; font-size: 28px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
 
 /* ── BODY ── */
 .card-body { padding: 20px 24px 28px; }
@@ -211,10 +226,11 @@ h1 { font-size:19px; font-weight:800; color:#1e293b; margin-bottom:6px; }
 <body>
 <div class="card" id="card" style="position:relative">
   <div class="card-header">
-    <div class="sys-title">Sistema de Asistencia</div>
+    <div class="app-name-wrap">
+      <div class="app-name"><span class="an-word">Asistencia</span><span class="an-num">40</span></div>
+    </div>
     <div class="logo-wrap" id="logo-wrap"></div>
     <div class="prof-name">Prof. Luis Ossandón Caiconte</div>
-    <div class="prof-sub">Asistencia40</div>
   </div>
   <div class="card-body">
     <div class="net-bar checking" id="net-bar">
